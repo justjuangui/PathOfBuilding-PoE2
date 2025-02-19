@@ -23,6 +23,7 @@ local slot_map = {
 	["Ring 1"] 			= { icon = NewImageHandle(), path = "Assets/icon_ring_left.png" },
 	["Ring 2"] 			= { icon = NewImageHandle(), path = "Assets/icon_ring_right.png" },
 	["Belt"] 			= { icon = NewImageHandle(), path = "Assets/icon_belt.png" },
+	["Passive node"] 	= { icon = NewImageHandle(), path = "Assets/icon_passive_node.png" },
 }
 
 local SkillListClass = newClass("SkillListControl", "ListControl", function(self, anchor, rect, skillsTab)
@@ -229,6 +230,9 @@ function SkillListClass:GetRowIcon(column, index, socketGroup)
 		end
 		if slot == "Weapon 2 Swap" and (weapon2SwapType == "Quiver" or weapon2SwapType == "Shield") then
 			slot = weapon2SwapType.." Swap"
+		end
+		if socketGroup.sourceNode then
+			slot = "Passive node"
 		end
 		return slot_map[slot] and slot_map[slot].icon
 	end

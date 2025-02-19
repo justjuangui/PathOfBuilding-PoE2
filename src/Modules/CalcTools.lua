@@ -57,6 +57,19 @@ function calcLib.validateGemLevel(gemInstance)
 	end
 end
 
+-- Maximum gem level for character level 
+function calcLib.gemLevelFromCharacterLevel(levels,characterLevel)
+	local gemLevel = 1
+	for currentLevel = 1, math.min(#levels,20), 1 do
+		if characterLevel >= levels[currentLevel].levelRequirement then
+			gemLevel = currentLevel
+		else
+			break
+		end
+	end
+	return gemLevel
+end
+
 -- Evaluate a skill type postfix expression
 function calcLib.doesTypeExpressionMatch(checkTypes, skillTypes, minionTypes)
 	local stack = { }

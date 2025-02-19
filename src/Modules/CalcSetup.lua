@@ -110,6 +110,22 @@ local function refreshJewelStatCache(env)
 	end
 end
 
+local function socketLimitFromGemLevel(gemLevel)
+	local socketBreakpoints = {}
+	socketBreakpoints[1] = 2
+	socketBreakpoints[11] = 3
+	socketBreakpoints[16] = 4
+	
+	while gemLevel>0 do
+		if socketBreakpoints[gemLevel] then
+			return socketBreakpoints[gemLevel]
+		else
+			gemLevel = gemLevel -1
+		end
+	end
+	return socketBreakpoints[1]
+end
+
 function calcs.buildModListForNode(env, node, incSmallPassiveSkill)
 	local localSmallIncEffect = 0
 	local modList = new("ModList")
@@ -1287,6 +1303,7 @@ function calcs.initEnv(build, mode, override, specEnv)
 					enabled = true,
 				}
 				activeGemInstance.fromItem = grantedSkill.sourceItem ~= nil
+				activeGemInstance.fromNode = grantedSkill.sourceNode ~= nil
 				activeGemInstance.gemId = nil
 				activeGemInstance.level = grantedSkill.level
 				activeGemInstance.enableGlobal1 = true
@@ -1620,7 +1637,7 @@ function calcs.initEnv(build, mode, override, specEnv)
 								t_insert(env.player.activeSkillList, activeSkill)
 							end
 						end
-						if gemInstance.gemData and not accelerate.requirementsGems then
+						if gemInstance.gemData and not (accelerate.requirementsGems or gemInstance.fromNode or gemInstance.fromItem ) then
 							t_insert(env.requirementsTableGems, {
 								source = "Gem",
 								sourceGem = gemInstance,
@@ -1756,6 +1773,7 @@ function calcs.initEnv(build, mode, override, specEnv)
 	-- Loop through socket groups to calculate number of socketed gems
 	for _, socketGroup in pairs(env.build.skillsTab.socketGroupList) do
 		local socketedSupportGems = 0
+		local socketedSupportGemsLimit = 0
 		if (socketGroup.enabled and socketGroup.gemList) then
 			for _, gem in pairs(socketGroup.gemList) do
 				if gem.supportEffect and gem.supportEffect.grantedEffect then
@@ -1767,11 +1785,18 @@ function calcs.initEnv(build, mode, override, specEnv)
 					elseif gem.supportEffect.grantedEffect.color == 3 then
 						slotSupportGemSocketsCount.B = slotSupportGemSocketsCount.B + 1
 					end
+				else
+					-- For skill granted by nodes/items we can calc the number of socket available, otherwise assume 5
+					local currentSupportLimit = 5
+					if gem.fromItem or gem.fromNode then
+						currentSupportLimit = socketLimitFromGemLevel(gem.level)
+					end
+					socketedSupportGemsLimit = math.max(socketedSupportGemsLimit, currentSupportLimit)
 				end
 			end
 		end
 		-- Warn if socketed gems over socket limit
-		if socketedSupportGems > 5 then
+		if socketedSupportGems > socketedSupportGemsLimit then
 			if env.build.calcsTab.mainEnv then
 				env.build.calcsTab.mainEnv.itemWarnings.socketLimitWarning = env.build.calcsTab.mainEnv.itemWarnings.socketLimitWarning or { }
 				t_insert(env.build.calcsTab.mainEnv.itemWarnings.socketLimitWarning, socketGroup.displayLabel)
