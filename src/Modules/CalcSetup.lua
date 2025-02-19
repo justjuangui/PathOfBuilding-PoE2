@@ -110,39 +110,6 @@ local function refreshJewelStatCache(env)
 	end
 end
 
-local function gemLevelFromPlayerLevel(playerLevel)
-	local levelBreakpoints = {}
-	levelBreakpoints[1] = 1
-	levelBreakpoints[3] = 2
-	levelBreakpoints[6] = 3
-	levelBreakpoints[10] = 4
-	levelBreakpoints[14] = 5
-	levelBreakpoints[18] = 6
-	levelBreakpoints[22] = 7
-	levelBreakpoints[26] = 8
-	levelBreakpoints[31] = 9
-	levelBreakpoints[36] = 10
-	levelBreakpoints[41] = 11
-	levelBreakpoints[46] = 12
-	levelBreakpoints[52] = 13
-	levelBreakpoints[56] = 14
-	levelBreakpoints[64] = 15
-	levelBreakpoints[66] = 16	
-	levelBreakpoints[72] = 17	
-	levelBreakpoints[78] = 18
-	levelBreakpoints[84] = 19
-	levelBreakpoints[90] = 20
-
-	while playerLevel>0 do
-		if levelBreakpoints[playerLevel] then
-			return levelBreakpoints[playerLevel]
-		else
-			playerLevel = playerLevel -1
-		end
-	end
-	return levelBreakpoints[1]	
-end
-
 local function socketLimitFromGemLevel(gemLevel)
 	local socketBreakpoints = {}
 	socketBreakpoints[1] = 2
@@ -1267,9 +1234,6 @@ function calcs.initEnv(build, mode, override, specEnv)
 				for _, skill in ipairs(node.grantedSkills) do
 					local grantedSkill = copyTable(skill)
 					grantedSkill.sourceNode = node
-					-- calc level of granted skill
-					grantedSkill.level = gemLevelFromPlayerLevel(build.characterLevel)
-					print(gemLevelFromPlayerLevel(build.characterLevel))
 					t_insert(env.grantedSkillsNodes, grantedSkill)
 				end
 			end

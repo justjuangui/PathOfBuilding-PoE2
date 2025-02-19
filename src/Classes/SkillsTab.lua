@@ -1008,6 +1008,11 @@ function SkillsTabClass:ProcessSocketGroup(socketGroup)
 			else
 				gemInstance.grantedEffect = grantedEffect
 			end
+			
+			-- for gems granted by nodes we need to calculate proper level
+			local characterLevel = self.build and self.build.characterLevel or 1
+			gemInstance.level = calcLib.gemLevelFromCharacterLevel(grantedEffect.levels,characterLevel)
+			
 			if gemInstance.triggered and gemInstance.grantedEffect then
 				if gemInstance.grantedEffect.levels[gemInstance.level] then
 					gemInstance.grantedEffect.levels[gemInstance.level].cost = {}
