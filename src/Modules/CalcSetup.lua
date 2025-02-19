@@ -110,6 +110,55 @@ local function refreshJewelStatCache(env)
 	end
 end
 
+local function gemLevelFromPlayerLevel(playerLevel)
+	local levelBreakpoints = {}
+	levelBreakpoints[1] = 1
+	levelBreakpoints[3] = 2
+	levelBreakpoints[6] = 3
+	levelBreakpoints[10] = 4
+	levelBreakpoints[14] = 5
+	levelBreakpoints[18] = 6
+	levelBreakpoints[22] = 7
+	levelBreakpoints[26] = 8
+	levelBreakpoints[31] = 9
+	levelBreakpoints[36] = 10
+	levelBreakpoints[41] = 11
+	levelBreakpoints[46] = 12
+	levelBreakpoints[52] = 13
+	levelBreakpoints[56] = 14
+	levelBreakpoints[64] = 15
+	levelBreakpoints[66] = 16	
+	levelBreakpoints[72] = 17	
+	levelBreakpoints[78] = 18
+	levelBreakpoints[84] = 19
+	levelBreakpoints[90] = 20
+
+	while playerLevel>0 do
+		if levelBreakpoints[playerLevel] then
+			return levelBreakpoints[playerLevel]
+		else
+			playerLevel = playerLevel -1
+		end
+	end
+	return levelBreakpoints[1]	
+end
+
+local function socketLimitFromGemLevel(gemLevel)
+	local socketBreakpoints = {}
+	socketBreakpoints[1] = 2
+	socketBreakpoints[11] = 3
+	socketBreakpoints[16] = 4
+	
+	while gemLevel>0 do
+		if socketBreakpoints[gemLevel] then
+			return socketBreakpoints[gemLevel]
+		else
+			gemLevel = gemLevel -1
+		end
+	end
+	return socketBreakpoints[1]
+end
+
 function calcs.buildModListForNode(env, node, incSmallPassiveSkill)
 	local localSmallIncEffect = 0
 	local modList = new("ModList")
@@ -1218,6 +1267,9 @@ function calcs.initEnv(build, mode, override, specEnv)
 				for _, skill in ipairs(node.grantedSkills) do
 					local grantedSkill = copyTable(skill)
 					grantedSkill.sourceNode = node
+					-- calc level of granted skill
+					grantedSkill.level = gemLevelFromPlayerLevel(build.characterLevel)
+					print(gemLevelFromPlayerLevel(build.characterLevel))
 					t_insert(env.grantedSkillsNodes, grantedSkill)
 				end
 			end
@@ -1287,6 +1339,7 @@ function calcs.initEnv(build, mode, override, specEnv)
 					enabled = true,
 				}
 				activeGemInstance.fromItem = grantedSkill.sourceItem ~= nil
+				activeGemInstance.fromNode = grantedSkill.sourceNode ~= nil
 				activeGemInstance.gemId = nil
 				activeGemInstance.level = grantedSkill.level
 				activeGemInstance.enableGlobal1 = true
@@ -1620,7 +1673,7 @@ function calcs.initEnv(build, mode, override, specEnv)
 								t_insert(env.player.activeSkillList, activeSkill)
 							end
 						end
-						if gemInstance.gemData and not (accelerate.requirementsGems or group.gemList[gemIndex].fromNode or group.gemList[gemIndex].fromItem ) then
+						if gemInstance.gemData and not (accelerate.requirementsGems or gemInstance.fromNode or gemInstance.fromItem ) then
 							t_insert(env.requirementsTableGems, {
 								source = "Gem",
 								sourceGem = gemInstance,
@@ -1756,6 +1809,7 @@ function calcs.initEnv(build, mode, override, specEnv)
 	-- Loop through socket groups to calculate number of socketed gems
 	for _, socketGroup in pairs(env.build.skillsTab.socketGroupList) do
 		local socketedSupportGems = 0
+		local socketedSupportGemsLimit = 0
 		if (socketGroup.enabled and socketGroup.gemList) then
 			for _, gem in pairs(socketGroup.gemList) do
 				if gem.supportEffect and gem.supportEffect.grantedEffect then
@@ -1767,11 +1821,18 @@ function calcs.initEnv(build, mode, override, specEnv)
 					elseif gem.supportEffect.grantedEffect.color == 3 then
 						slotSupportGemSocketsCount.B = slotSupportGemSocketsCount.B + 1
 					end
+				else
+					-- For skill granted by nodes/items we can calc the number of socket available, otherwise assume 5
+					local currentSupportLimit = 5
+					if gem.fromItem or gem.fromNode then
+						currentSupportLimit = socketLimitFromGemLevel(gem.level)
+					end
+					socketedSupportGemsLimit = math.max(socketedSupportGemsLimit, currentSupportLimit)
 				end
 			end
 		end
 		-- Warn if socketed gems over socket limit
-		if socketedSupportGems > 5 then
+		if socketedSupportGems > socketedSupportGemsLimit then
 			if env.build.calcsTab.mainEnv then
 				env.build.calcsTab.mainEnv.itemWarnings.socketLimitWarning = env.build.calcsTab.mainEnv.itemWarnings.socketLimitWarning or { }
 				t_insert(env.build.calcsTab.mainEnv.itemWarnings.socketLimitWarning, socketGroup.displayLabel)
