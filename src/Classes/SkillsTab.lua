@@ -386,8 +386,8 @@ function SkillsTabClass:Save(xml)
 				groupCount = socketGroup.groupCount ~= nil and tostring(socketGroup.groupCount),
 				label = socketGroup.label,
 				source = socketGroup.source,
-				set1 = tostring(socketGroup.set1 or true),
-				set2 = tostring(socketGroup.set2 or true),
+				set1 = tostring(socketGroup.set1),
+				set2 = tostring(socketGroup.set2),
 				mainActiveSkill = tostring(socketGroup.mainActiveSkill),
 				mainActiveSkillCalcs = tostring(socketGroup.mainActiveSkillCalcs),
 			} }
