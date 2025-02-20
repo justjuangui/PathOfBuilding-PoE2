@@ -1261,13 +1261,19 @@ function calcs.initEnv(build, mode, override, specEnv)
 			for _, grantedSkill in ipairs(env.grantedSkills) do
 				-- Check if a matching group already exists
 				local group
+				local forceNewGem = false
 				for index, socketGroup in pairs(build.skillsTab.socketGroupList) do
-					if socketGroup.source == grantedSkill.source and socketGroup.slot == grantedSkill.slotName then
-						if socketGroup.gemList[1] and socketGroup.gemList[1].skillId == grantedSkill.skillId and (socketGroup.gemList[1].level == grantedSkill.level or socketGroup.gemList[1].level == getNormalizedSkillLevel(grantedSkill)) then
-							group = socketGroup
-							markList[socketGroup] = true
-							break
-						end
+					if socketGroup.source == grantedSkill.source and socketGroup.slot == grantedSkill.slotName and socketGroup.gemList[1] and socketGroup.gemList[1].skillId == grantedSkill.skillId then
+						-- If skill has same source and name of an existing group, use it
+						group = socketGroup
+						markList[socketGroup] = true
+						break
+					elseif socketGroup.sourceNode and grantedSkill.sourceNode and socketGroup.sourceNode.isMultipleChoiceOption and socketGroup.sourceNode.connections[1].id == grantedSkill.sourceNode.connections[1].id then
+						-- Existing group selection in case of switching between multiple choice nodes to avoid losing support gems
+						group = socketGroup
+						markList[socketGroup] = true
+						forceNewGem = true
+						break
 					end
 				end
 				if not group then
@@ -1291,12 +1297,34 @@ function calcs.initEnv(build, mode, override, specEnv)
 					group = { label = "", enabled = true, gemList = { }, source = grantedSkill.source, slot = grantedSkill.slotName }
 					t_insert(build.skillsTab.socketGroupList, group)
 					markList[group] = true
+					-- Handle here default set enable state to avoid override at every user change
+					if group.sourceItem then
+						local swap = not not group.slot:find("Swap")
+						if swap then
+							-- If slot name contains swap is on weaponset 2
+							group.set1 = false
+							group.set2 = true				
+						else
+							-- If slot name not contains swap, check if is an armour
+							group.set1 = true
+							if build.itemsTab.slots[group.slot.." Swap"] then
+								group.set2 = false
+							else
+								group.set2 = true
+							end
+						end
+					elseif group.sourceNode then
+						group.set1 = true
+						group.set2 = true
+					end					
 				end
 
 				-- Update the group
 				group.sourceItem = grantedSkill.sourceItem
 				group.sourceNode = grantedSkill.sourceNode
-				local activeGemInstance = group.gemList[1] or {
+				
+				--print(group.source)
+				local activeGemInstance = (not forceNewGem and group.gemList[1]) or {
 					skillId = grantedSkill.skillId,
 					nameSpec = grantedSkill.nameSpec,
 					quality = 0,
@@ -1312,7 +1340,13 @@ function calcs.initEnv(build, mode, override, specEnv)
 				activeGemInstance.triggered = grantedSkill.triggered
 				activeGemInstance.triggerChance = grantedSkill.triggerChance
 				group.gemList[1] = activeGemInstance
-				build.skillsTab:ProcessSocketGroup(group)
+				if build.skillsTab.displayGroup == group then
+					-- if this skill group is currently displayed, update it
+					build.skillsTab:SetDisplayGroup(group)					
+				else
+					-- otherwise just process gems information
+					build.skillsTab:ProcessSocketGroup(group)
+				end
 			end
 
 			if #env.explodeSources ~= 0 then

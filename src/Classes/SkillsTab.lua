@@ -154,7 +154,11 @@ local SkillsTabClass = newClass("SkillsTab", "UndoHandler", "ControlHost", "Cont
 	end)
 
 	self.controls.set1Enabled.enabled = function()
-		return self.displayGroup.source == nil
+		if self.displayGroup.source == nil or self.displayGroup.slot == nil then
+			return true
+		else 
+			return not self.displayGroup.slot:find("Swap")
+		end
 	end
 
 	self.controls.set2Enabled = new("CheckBoxControl", { "LEFT", self.controls.set1Enabled, "RIGHT" }, { 50, 0, 20 }, "Set 2:", function(state)
@@ -164,7 +168,11 @@ local SkillsTabClass = newClass("SkillsTab", "UndoHandler", "ControlHost", "Cont
 	end)
 
 	self.controls.set2Enabled.enabled = function()
-		return self.displayGroup.source == nil
+		if self.displayGroup.source == nil or self.displayGroup.slot == nil then
+			return true
+		else 
+			return self.displayGroup.slot:find("Swap") or not self.build.itemsTab.slots[self.displayGroup.slot.." Swap"]
+		end
 	end
 
 	self.controls.groupEnabled = new("CheckBoxControl", { "LEFT", self.controls.set2Enabled, "RIGHT" }, { 70, 0, 20 }, "Enabled:", function(state)
@@ -1009,9 +1017,12 @@ function SkillsTabClass:ProcessSocketGroup(socketGroup)
 				gemInstance.grantedEffect = grantedEffect
 			end
 			
-			-- for gems granted by nodes we need to calculate proper level
-			local characterLevel = self.build and self.build.characterLevel or 1
-			gemInstance.level = calcLib.gemLevelFromCharacterLevel(grantedEffect.levels,characterLevel)
+			if gemInstance.fromNode then
+				-- For gems granted by nodes we need to calculate proper level
+				local characterLevel = self.build and self.build.characterLevel or 1
+				gemInstance.level = calcLib.gemLevelFromCharacterLevel(grantedEffect.levels,characterLevel)
+				
+			end
 			
 			if gemInstance.triggered and gemInstance.grantedEffect then
 				if gemInstance.grantedEffect.levels[gemInstance.level] then
@@ -1071,14 +1082,6 @@ function SkillsTabClass:SetDisplayGroup(socketGroup)
 		self.controls.groupLabel:SetText(socketGroup.label)
 		self.controls.groupEnabled.state = socketGroup.enabled
 		self.controls.includeInFullDPS.state = socketGroup.includeInFullDPS and socketGroup.enabled
-		if socketGroup.sourceItem then
-			local swap = not not socketGroup.slot:find("Swap")
-			socketGroup.set1 = not swap
-			socketGroup.set2 = swap
-		elseif socketGroup.sourceNode then
-			socketGroup.set1 = true
-			socketGroup.set2 = true
-		end
 
 		self.controls.set1Enabled.state = socketGroup.set1 == nil and true or socketGroup.set1
 		self.controls.set2Enabled.state = socketGroup.set2 == nil and true or socketGroup.set2
